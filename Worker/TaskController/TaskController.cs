@@ -27,9 +27,9 @@ namespace Worker.TaskController
             clientHandler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; };
 
             HttpClient client = new HttpClient(clientHandler);
-            MemeResponse? memeResponse = await client.GetFromJsonAsync<MemeResponse>(URL);
+            //MemeResponse? memeResponse = await client.GetFromJsonAsync<MemeResponse>(URL);
 
-            MemoryStream memoryStream;
+            /*MemoryStream memoryStream;
             if (memeResponse != null && !memeResponse.nsfw)
             {
                 byte[] bytes = await client.GetByteArrayAsync(memeResponse.url);
@@ -38,7 +38,7 @@ namespace Worker.TaskController
                 string fileName = "image-" + Guid.NewGuid() +".jpg";
                 FileStream fs = System.IO.File.Create(_worker.WorkDir + fileName, bytes.Length);
                 fs.Write(bytes, 0, bytes.Length);
-            }
+            }*/
 
            
 

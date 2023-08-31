@@ -44,13 +44,13 @@ namespace TaskExecutor.Services
                 string? response = null;
                 try
                 {
-                    response = await client.GetFromJsonAsync<string>(url);
+                    response = await client.GetStringAsync(url);
                 } catch(Exception ex)
                 {
                     response = null;
                 }
 
-                Thread.Sleep(10000);
+                //Thread.Sleep(10000);
 
                 if(response == null)
                 {
