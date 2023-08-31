@@ -1,14 +1,14 @@
-﻿namespace Worker.Models
+﻿namespace TaskExecutor.Models
 {
     public class Task
     {
         public Guid Id { get; set; }
-        public TaskStatus status { get; set; }
+        public TaskStatus Status { get; set; }
 
         public Task()
         {
             Id = Guid.NewGuid();
-            status = TaskStatus.Running;
+            Status = TaskStatus.Pending;
         }
     }
 }

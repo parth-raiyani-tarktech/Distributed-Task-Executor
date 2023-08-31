@@ -13,10 +13,10 @@ namespace TaskExecutor.Controllers
     [ApiController]
     public class NodesController : ControllerBase
     {
-        private readonly TaskAllocator _taskAllocator;
+        private readonly NodeManager _nodeManager;
         public NodesController()
         {
-            _taskAllocator = new TaskAllocator();
+            _nodeManager = new NodeManager();
         }
 
         [HttpPost]
@@ -24,7 +24,7 @@ namespace TaskExecutor.Controllers
         public IActionResult RegisterNode([FromBody] NodeRegistrationRequest node)
         {
             // TODO: Implement this method
-            _taskAllocator.RegisterNode(node.Name, node.Address);
+            _nodeManager.RegisterNode(node.Name, node.Address);
             return Ok();
         }
         
@@ -32,23 +32,15 @@ namespace TaskExecutor.Controllers
         [Route("unregister/{name}")]
         public IActionResult UnRegisterNode(string name)
         {
-            _taskAllocator.UnregisterNode(name);
+            _nodeManager.UnregisterNode(name);
             return Ok();
         }
 
         [HttpGet]
-        [Route("scheduletask")]
-        public IActionResult ScheduleTask()
+        [Route("get-all-Nodes")]
+        public IActionResult GetAllNodes()
         {
-            _taskAllocator.ScheduleTask();
-            return Ok();
-        }
-
-        [HttpGet]
-        [Route("getNodes")]
-        public IActionResult GetNodes()
-        {
-            return (IActionResult)_taskAllocator.GetNodes();
+            return Ok(_nodeManager.GetAllNodes());
         }
     }
 }

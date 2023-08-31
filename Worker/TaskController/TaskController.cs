@@ -1,30 +1,48 @@
-﻿using System.Net;
-using System.Drawing;
-using System.Text.Json;
+﻿using System;
+using System.IO;
 using Worker.Models;
-using static System.Net.Mime.MediaTypeNames;
+using Microsoft.AspNetCore.Mvc;
+using System.Text;
+using System.Collections;
 
 namespace Worker.TaskController
 {
-    public class TaskController
+    [Route("api/[controller]")]
+    [ApiController]
+    public class TaskController : ControllerBase
     {
         private const string URL = "https://meme-api.com/gimme/wholesomememes";
-        public void SaveMeme()
+        private readonly WorkerInfo _worker;
+        public TaskController(WorkerInfo worker)
         {
-            WebRequest request = HttpWebRequest.Create(URL);
-            WebResponse response = request.GetResponse();
-            StreamReader reader = new StreamReader(response.GetResponseStream());
-            string urlText = reader.ReadToEnd();
+            _worker = worker;
+        }
 
-            MemeResponse memeResponse = JsonSerializer.Deserialize<MemeResponse>(urlText);
 
-            if(memeResponse != null && !memeResponse.nsfw)
+        [HttpGet]
+        [Route("download")]
+        public async Task<IActionResult> SaveMeme()
+        {
+            HttpClientHandler clientHandler = new HttpClientHandler();
+            clientHandler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; };
+
+            HttpClient client = new HttpClient(clientHandler);
+            MemeResponse? memeResponse = await client.GetFromJsonAsync<MemeResponse>(URL);
+
+            MemoryStream memoryStream;
+            if (memeResponse != null && !memeResponse.nsfw)
             {
-                WebClient wc = new WebClient();
-                byte[] bytes = wc.DownloadData(memeResponse.url);
-                MemoryStream memoryStream = new MemoryStream(bytes);
-                //Convert and save Image
+                byte[] bytes = await client.GetByteArrayAsync(memeResponse.url);
+                memoryStream = new MemoryStream(bytes);
+
+                string fileName = "image-" + Guid.NewGuid() +".jpg";
+                FileStream fs = System.IO.File.Create(_worker.WorkDir + fileName, bytes.Length);
+                fs.Write(bytes, 0, bytes.Length);
             }
+
+           
+
+            return Ok("Done");//Here, return the taskStatus
         }
     }
 }

@@ -6,7 +6,7 @@ public class WorkerInfo
     {
         Name = name;
         Port = port;
-        WorkDir = Path.Combine(Environment.CurrentDirectory, "work");
+        WorkDir = Path.Combine(Environment.CurrentDirectory, "work\\");
     }
     
     public string Name { get; set; }

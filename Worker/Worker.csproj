@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
@@ -8,13 +8,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Compile Remove="NewFolder\**" />
-      <Content Remove="NewFolder\**" />
-      <EmbeddedResource Remove="NewFolder\**" />
-      <None Remove="NewFolder\**" />
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
     </ItemGroup>
 
@@ -22,6 +15,10 @@
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="work\" />
     </ItemGroup>
 
 </Project>
