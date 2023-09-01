@@ -23,7 +23,6 @@ namespace TaskExecutor.Controllers
         [Route("register")]
         public IActionResult RegisterNode([FromBody] NodeRegistrationRequest node)
         {
-            // TODO: Implement this method
             _nodeManager.RegisterNode(node.Name, node.Address);
             return Ok();
         }

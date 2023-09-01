@@ -8,22 +8,26 @@ namespace TaskExecutor.Services
 
         public static Node? GetFirstAvailableNode()
         {
-            Node? availableNode = Nodes.FirstOrDefault(_ => _.Status == NodeStatus.Available);
-            if(availableNode != null)
-            {
-                availableNode.Status = NodeStatus.Busy;
-            }
-            return availableNode;
+            return Nodes.FirstOrDefault(_ => _.Status == NodeStatus.Available);
         }
 
-        public static void UpdateNodeStatusToAvailable(Node nodeToUpdate)
+        public static void UpdateNodeStatus(Node nodeToUpdate, NodeStatus status)
         {
-            Nodes.First(_ => _.Equals(nodeToUpdate)).Status = NodeStatus.Available;
+            if (nodeToUpdate != null)
+            {
+                nodeToUpdate.Status = NodeStatus.Busy;
+                Nodes.First(_ => _.Equals(nodeToUpdate)).Status = status;
+            }
+            if(status == NodeStatus.Available)
+            {
+                TaskAllocator.ExecuteTasks();
+            }
         }
 
         public void RegisterNode(string name, string address)
         {
             Nodes.Add(new Node(name, address));
+            TaskAllocator.ExecuteTasks();
         }
 
         public void UnregisterNode(string name)

@@ -32,14 +32,5 @@ namespace TaskExecutor.Controllers
         {
             return Ok(_taskAllocator.GetAllTasksInExecutionOrder());
         }
-
-
-        [HttpPost]
-        [Route("schedule-tasks")]
-        public IActionResult ScheduleTasks()
-        {
-            _taskAllocator.ScheduleTasks();
-            return Ok();
-        }
     }
 }
