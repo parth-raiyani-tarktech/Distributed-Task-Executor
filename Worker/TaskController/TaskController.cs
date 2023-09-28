@@ -1,9 +1,5 @@
-﻿using System;
-using System.IO;
-using Worker.Models;
+﻿using Worker.Models;
 using Microsoft.AspNetCore.Mvc;
-using System.Text;
-using System.Collections;
 
 namespace Worker.TaskController
 {
@@ -21,10 +17,10 @@ namespace Worker.TaskController
 
         [HttpGet]
         [Route("execute")]
-        public async Task<IActionResult> SaveMeme()
+        public IActionResult SaveMeme()
         {
             HttpClient client = new HttpClient();
-            var response = Task.Run(async () => await SaveMemeAsJPG());
+            var response = Task.Run(async () => await SaveMemeAsJPGAsync());
 
             if (!response.Wait(TimeSpan.FromSeconds(Timeout)))
             {
@@ -33,7 +29,7 @@ namespace Worker.TaskController
             return Ok(response);
         }
 
-        private async Task<Models.TaskStatus> SaveMemeAsJPG()
+        private async Task<Models.TaskStatus> SaveMemeAsJPGAsync()
         {
             HttpClient client = new HttpClient();
             MemeResponse? memeResponse = await client.GetFromJsonAsync<MemeResponse>(URL);

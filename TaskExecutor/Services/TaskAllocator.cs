@@ -1,4 +1,5 @@
-﻿using TaskExecutor.Models;
+﻿using System.Threading.Tasks;
+using TaskExecutor.Models;
 using Task = TaskExecutor.Models.Task;
 
 namespace TaskExecutor.Services
@@ -6,6 +7,8 @@ namespace TaskExecutor.Services
     public class TaskAllocator
     {
         private static readonly List<Task> _tasks = new List<Task>();
+        private static readonly int RetryCount = 3;
+        private static readonly int Timeout = 5;
 
         public void CreateTask(Task task)
         {
@@ -16,7 +19,7 @@ namespace TaskExecutor.Services
 
             task.Id = Guid.NewGuid();
             _tasks.Add(task);
-            ExecuteTasks();
+            ExecuteTask();
         }
 
         public List<Task> GetTaskByStatus(Models.TaskStatus status)
@@ -30,41 +33,56 @@ namespace TaskExecutor.Services
                     _.Status != Models.TaskStatus.Failed).ToList();
         }
 
-        public static async void ExecuteTasks()
+        public static void ExecuteTask()
         {
-            Node? availableNode = NodeManager.GetFirstAvailableNode();
             Task? taskToComplete = _tasks
-                .FirstOrDefault(_ => _.Status == Models.TaskStatus.Pending 
-                    || _.Status == Models.TaskStatus.Failed);
+                .FirstOrDefault(_ => _.Status == Models.TaskStatus.Pending);
 
-            if (availableNode != null && taskToComplete != null)
+            Node? availableNode = NodeManager.GetFirstAvailableNode();
+
+            if (taskToComplete == null || availableNode == null)
             {
-                NodeManager.UpdateNodeStatus(availableNode, NodeStatus.Busy);
-                taskToComplete.Status = Models.TaskStatus.Running;
+                return;
+                /* Cases:
+                 * 1. No tasks to perform
+                 * 2. Try after sometime as all nodes are busy
+                 */
+            }
 
-                HttpClient client = new HttpClient();
-                var url = availableNode.Address + "/api/Task/execute";
+            NodeManager.UpdateNodeStatus(availableNode, NodeStatus.Busy);
+            taskToComplete.Status = Models.TaskStatus.Running;
 
-                Models.TaskStatus response = Models.TaskStatus.Completed;
-                try
+            TaskAllocation taskAllocation = new TaskAllocation(taskToComplete, availableNode);
+            taskToComplete.taskAllocations.Add(taskAllocation);
+            availableNode.TaskAllocation.Add(taskAllocation);
+
+            HttpClient client = new HttpClient();
+
+            var taskStatus = Models.TaskStatus.Completed;
+            try
+            {
+                var response = System.Threading.Tasks
+                    .Task.Run(async () =>
+                        Enum.Parse<Models.TaskStatus>(await client.GetStringAsync(availableNode.Url)));
+
+                if (!response.Wait(TimeSpan.FromSeconds(Timeout)))
                 {
-                    response = Enum.Parse<Models.TaskStatus>(await client.GetStringAsync(url));
-                } catch(Exception ex)
-                {
-                    response = Models.TaskStatus.Failed;
+                    taskStatus = Models.TaskStatus.Failed;
                 }
+            }
+            catch (Exception ex)
+            {
+                taskStatus = Models.TaskStatus.Failed;
+            }
 
-                taskToComplete.Status = response;
-                NodeManager.UpdateNodeStatus(availableNode, NodeStatus.Available);
-            }
-            else if(taskToComplete == null)
+            if (taskStatus == Models.TaskStatus.Failed)
             {
-                return;//No tasks to perform
-            } 
-            else
-            {
-                return;//[TODO]: try after sometime as all nodes are busy
+                taskToComplete.Status = taskToComplete.taskAllocations.Count() >= RetryCount
+                    ? Models.TaskStatus.Failed : Models.TaskStatus.Pending;
             }
+
+            NodeManager.UpdateNodeStatus(availableNode, NodeStatus.Available);
+            ExecuteTask();
         }
     }
 }

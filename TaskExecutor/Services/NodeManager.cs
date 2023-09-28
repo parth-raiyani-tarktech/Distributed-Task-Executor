@@ -15,19 +15,15 @@ namespace TaskExecutor.Services
         {
             if (nodeToUpdate != null)
             {
-                nodeToUpdate.Status = NodeStatus.Busy;
-                Nodes.First(_ => _.Equals(nodeToUpdate)).Status = status;
-            }
-            if(status == NodeStatus.Available)
-            {
-                TaskAllocator.ExecuteTasks();
+                nodeToUpdate.Status = status;
+                Nodes.First(_ => _.Id.Equals(nodeToUpdate.Id)).Status = status;
             }
         }
 
         public void RegisterNode(string name, string address)
         {
             Nodes.Add(new Node(name, address));
-            TaskAllocator.ExecuteTasks();
+            TaskAllocator.ExecuteTask();
         }
 
         public void UnregisterNode(string name)
