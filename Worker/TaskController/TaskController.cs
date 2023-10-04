@@ -16,6 +16,13 @@ namespace Worker.TaskController
         }
 
         [HttpGet]
+        [Route("health-check")]
+        public IActionResult IsWorkerUp()
+        {
+            return Ok("I'm up!");
+        }
+
+        [HttpGet]
         [Route("execute")]
         public IActionResult SaveMeme()
         {

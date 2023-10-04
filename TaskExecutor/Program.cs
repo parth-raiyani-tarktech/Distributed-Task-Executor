@@ -1,3 +1,6 @@
+using Quartz.Spi;
+using TaskExecutor.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -6,6 +9,11 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddTransient<NodeHealthCheckerJob>();
+
+builder.Services.AddSingleton<IJobFactory, MyJobFactory>();
+builder.Services.AddSingleton<IMyScheduler, MyScheduler>();
 
 var app = builder.Build();
 

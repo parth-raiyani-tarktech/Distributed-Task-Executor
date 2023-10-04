@@ -19,7 +19,7 @@ namespace TaskExecutor.Services
 
             task.Id = Guid.NewGuid();
             _tasks.Add(task);
-            ExecuteTask();
+            ExecuteTaskAsync();
         }
 
         public List<Task> GetTaskByStatus(Models.TaskStatus status)
@@ -33,7 +33,7 @@ namespace TaskExecutor.Services
                     _.Status != Models.TaskStatus.Failed).ToList();
         }
 
-        public static void ExecuteTask()
+        public static async void ExecuteTaskAsync()
         {
             Task? taskToComplete = _tasks
                 .FirstOrDefault(_ => _.Status == Models.TaskStatus.Pending);
@@ -61,14 +61,7 @@ namespace TaskExecutor.Services
             var taskStatus = Models.TaskStatus.Completed;
             try
             {
-                var response = System.Threading.Tasks
-                    .Task.Run(async () =>
-                        Enum.Parse<Models.TaskStatus>(await client.GetStringAsync(availableNode.Url)));
-
-                if (!response.Wait(TimeSpan.FromSeconds(Timeout)))
-                {
-                    taskStatus = Models.TaskStatus.Failed;
-                }
+                taskStatus = Enum.Parse<Models.TaskStatus>(await client.GetStringAsync(availableNode.Url));
             }
             catch (Exception ex)
             {
@@ -82,7 +75,17 @@ namespace TaskExecutor.Services
             }
 
             NodeManager.UpdateNodeStatus(availableNode, NodeStatus.Available);
-            ExecuteTask();
+            ExecuteTaskAsync();
+        }
+
+        public static void OnNodeUnregister(Node node)
+        {
+            Task? taskToComplete = _tasks
+                .Where(_ => _.Status == Models.TaskStatus.Running)
+                .FirstOrDefault( _ => _.taskAllocations.Last().Node.Name == node.Name);
+
+            taskToComplete.Status = Models.TaskStatus.Pending;
+            ExecuteTaskAsync();
         }
     }
 }

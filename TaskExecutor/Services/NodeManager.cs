@@ -1,10 +1,17 @@
-﻿using TaskExecutor.Models;
+﻿using Quartz.Logging;
+using TaskExecutor.Models;
 
 namespace TaskExecutor.Services
 {
     public class NodeManager
     {
         private static readonly List<Node> Nodes = new List<Node>();
+        private readonly IMyScheduler _scheduler;
+
+        public NodeManager(IServiceProvider serviceProvider)
+        {
+            _scheduler = serviceProvider.GetService<IMyScheduler>();
+        }
 
         public static Node? GetFirstAvailableNode()
         {
@@ -22,13 +29,40 @@ namespace TaskExecutor.Services
 
         public void RegisterNode(string name, string address)
         {
-            Nodes.Add(new Node(name, address));
-            TaskAllocator.ExecuteTask();
+            if(name == null)
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+
+            if (address == null)
+            {
+                throw new ArgumentException(nameof(address));
+            }
+
+            if(Nodes.Find(_ => _.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) != null)
+            {
+                throw new ArgumentException($"Node with {nameof(name)}: {name} already exist!");
+            }
+
+            if (Nodes.Find(_ => _.Address.Equals(address, StringComparison.OrdinalIgnoreCase)) != null)
+            {
+                throw new ArgumentException($"Node with Address {nameof(address)}: {address} already exist!");
+            }
+
+            Node newNode = new Node(name, address);
+            Nodes.Add(newNode);
+
+            _scheduler.Start(newNode);
+
+            TaskAllocator.ExecuteTaskAsync();
         }
 
-        public void UnregisterNode(string name)
+        public static void UnregisterNode(string name)
         {
-            Node? nodeToRemove = Nodes.FindLast(_ => _.Name.ToLower().Equals(name.ToLower(), StringComparison.Ordinal));
+            Node? nodeToRemove = Nodes.FindLast(_ => _.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+            TaskAllocator.OnNodeUnregister(nodeToRemove);
+
             if(nodeToRemove != null)
             {
                 Nodes.Remove(nodeToRemove);

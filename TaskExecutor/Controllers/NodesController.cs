@@ -14,9 +14,9 @@ namespace TaskExecutor.Controllers
     public class NodesController : ControllerBase
     {
         private readonly NodeManager _nodeManager;
-        public NodesController()
+        public NodesController(IServiceProvider serviceProvider)
         {
-            _nodeManager = new NodeManager();
+            _nodeManager = new NodeManager(serviceProvider);
         }
 
         [HttpPost]
@@ -31,7 +31,7 @@ namespace TaskExecutor.Controllers
         [Route("unregister/{name}")]
         public IActionResult UnRegisterNode(string name)
         {
-            _nodeManager.UnregisterNode(name);
+            NodeManager.UnregisterNode(name);
             return Ok();
         }
 
