@@ -1,7 +1,7 @@
 ﻿using Quartz;
 using Quartz.Spi;
 
-namespace TaskExecutor.Services
+namespace TaskExecutor.Services.Job
 {
     public class MyJobFactory : IJobFactory
     {

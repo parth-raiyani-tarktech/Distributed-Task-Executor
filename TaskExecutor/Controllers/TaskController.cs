@@ -15,9 +15,9 @@ namespace TaskExecutor.Controllers
         }
 
         [HttpPost]
-        public IActionResult CreateTask(Task task)
+        public IActionResult CreateTask()
         {
-            _taskAllocator.CreateTask(task);
+            Task task = _taskAllocator.CreateTask();
             return Ok(task);
         }
 

@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using TaskExecutor.Models;
 using Task = TaskExecutor.Models.Task;
+using SystemTask = System.Threading.Tasks.Task;
 
 namespace TaskExecutor.Services
 {
@@ -8,18 +9,14 @@ namespace TaskExecutor.Services
     {
         private static readonly List<Task> _tasks = new List<Task>();
         private static readonly int RetryCount = 3;
-        private static readonly int Timeout = 5;
+        private static readonly int Timeout = 10;
 
-        public void CreateTask(Task task)
+        public Task CreateTask()
         {
-            if(task == null)
-            {
-                throw new ArgumentNullException("task can not be null");
-            }
-
-            task.Id = Guid.NewGuid();
+            Task task = new Task();
             _tasks.Add(task);
             ExecuteTaskAsync();
+            return task;
         }
 
         public List<Task> GetTaskByStatus(Models.TaskStatus status)
@@ -29,8 +26,7 @@ namespace TaskExecutor.Services
 
         public List<Task> GetAllTasksInExecutionOrder()
         {
-            return _tasks.Where(_ => _.Status == Models.TaskStatus.Pending ||
-                    _.Status != Models.TaskStatus.Failed).ToList();
+            return _tasks.Where(_ => _.Status == Models.TaskStatus.Pending).ToList();
         }
 
         public static async void ExecuteTaskAsync()
@@ -61,7 +57,25 @@ namespace TaskExecutor.Services
             var taskStatus = Models.TaskStatus.Completed;
             try
             {
-                taskStatus = Enum.Parse<Models.TaskStatus>(await client.GetStringAsync(availableNode.Url));
+                CancellationTokenSource cts = new CancellationTokenSource();
+
+                var response = SystemTask.Run(async () =>
+                                        Enum.Parse<Models.TaskStatus>(await client.GetStringAsync(availableNode.ExecuteTaskUrl)));
+
+                var completedTask = await SystemTask.WhenAny(response, SystemTask.Delay(TimeSpan.FromSeconds(Timeout), cts.Token));
+
+                if (completedTask == response)
+                {
+                    taskStatus = await response;
+                }
+                else
+                {
+                    taskStatus = Models.TaskStatus.Failed;
+
+                    HttpRequestMessage abortTaskRequest = new HttpRequestMessage(HttpMethod.Post, availableNode.AbortTaskUrl);
+                    var abortResponse = await client.SendAsync(abortTaskRequest);
+                    abortResponse.EnsureSuccessStatusCode();
+                }
             }
             catch (Exception ex)
             {
@@ -72,13 +86,16 @@ namespace TaskExecutor.Services
             {
                 taskToComplete.Status = taskToComplete.taskAllocations.Count() >= RetryCount
                     ? Models.TaskStatus.Failed : Models.TaskStatus.Pending;
+            } else
+            {
+                taskToComplete.Status = taskStatus;
             }
 
             NodeManager.UpdateNodeStatus(availableNode, NodeStatus.Available);
             ExecuteTaskAsync();
         }
 
-        public static void OnNodeUnregister(Node node)
+        public static void StopOngoingTaskOf(Node node)
         {
             Task? taskToComplete = _tasks
                 .Where(_ => _.Status == Models.TaskStatus.Running)

@@ -1,5 +1,6 @@
 ﻿using Worker.Models;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading;
 
 namespace Worker.TaskController
 {
@@ -9,7 +10,8 @@ namespace Worker.TaskController
     {
         private const string URL = "https://meme-api.com/gimme/wholesomememes";
         private readonly WorkerInfo _worker;
-        private readonly int Timeout = 5;
+        private static readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+
         public TaskController(WorkerInfo worker)
         {
             _worker = worker;
@@ -22,34 +24,40 @@ namespace Worker.TaskController
             return Ok("I'm up!");
         }
 
-        [HttpGet]
-        [Route("execute")]
-        public IActionResult SaveMeme()
+        [HttpPost]
+        [Route("abort")]
+        public void AbortTask()
         {
-            HttpClient client = new HttpClient();
-            var response = Task.Run(async () => await SaveMemeAsJPGAsync());
-
-            if (!response.Wait(TimeSpan.FromSeconds(Timeout)))
-            {
-                return Ok(Models.TaskStatus.Failed);
-            }
-            return Ok(response);
+            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource.Dispose();
         }
 
-        private async Task<Models.TaskStatus> SaveMemeAsJPGAsync()
+        [HttpGet]
+        [Route("execute")]
+        public async Task<IActionResult> SaveMemeAsync()
+        {
+            await Task.Run(async () => await SaveMemeAsJPGAsync(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
+
+
+            return Ok(Models.TaskStatus.Completed);
+        }
+
+        private async Task SaveMemeAsJPGAsync(CancellationToken token)
         {
             HttpClient client = new HttpClient();
-            MemeResponse? memeResponse = await client.GetFromJsonAsync<MemeResponse>(URL);
+            MemeResponse? memeResponse = await client.GetFromJsonAsync<MemeResponse>(URL, token);
             
             if (memeResponse != null && !memeResponse.nsfw)
             {
-                byte[] bytes = await client.GetByteArrayAsync(memeResponse.url);
+                byte[] bytes = await client.GetByteArrayAsync(memeResponse.url, token);
 
                 string fileName = "image-" + Guid.NewGuid() + ".jpg";
+                if (!Directory.Exists(_worker.WorkDir))
+                    Directory.CreateDirectory(_worker.WorkDir);
+
                 FileStream fs = System.IO.File.Create(_worker.WorkDir + fileName, bytes.Length);
-                fs.Write(bytes, 0, bytes.Length);
+                await fs.WriteAsync(bytes, 0, bytes.Length, token);
             }
-            return Models.TaskStatus.Completed;
         }
     }
 }

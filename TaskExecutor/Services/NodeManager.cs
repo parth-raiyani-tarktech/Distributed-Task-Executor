@@ -1,5 +1,6 @@
 ﻿using Quartz.Logging;
 using TaskExecutor.Models;
+using TaskExecutor.Services.Scheduler;
 
 namespace TaskExecutor.Services
 {
@@ -24,6 +25,14 @@ namespace TaskExecutor.Services
             {
                 nodeToUpdate.Status = status;
                 Nodes.First(_ => _.Id.Equals(nodeToUpdate.Id)).Status = status;
+            }
+        }
+
+        public static void UpdateNodeStatusByName(string nodeName, NodeStatus status)
+        {
+            if (nodeName != null)
+            {
+                Nodes.First(_ => _.Name.Equals(nodeName, StringComparison.CurrentCultureIgnoreCase)).Status = status;
             }
         }
 
@@ -57,14 +66,14 @@ namespace TaskExecutor.Services
             TaskAllocator.ExecuteTaskAsync();
         }
 
-        public static void UnregisterNode(string name)
+        public void UnregisterNode(string name)
         {
             Node? nodeToRemove = Nodes.FindLast(_ => _.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
-            TaskAllocator.OnNodeUnregister(nodeToRemove);
-
             if(nodeToRemove != null)
             {
+                _scheduler.StopAsync(nodeToRemove);
+                TaskAllocator.StopOngoingTaskOf(nodeToRemove);
                 Nodes.Remove(nodeToRemove);
             }
         }
@@ -72,6 +81,21 @@ namespace TaskExecutor.Services
         public List<Node> GetAllNodes()
         {
             return Nodes;
+        }
+
+        public Node? GetNodeByName(string name)
+        {
+            return Nodes.FirstOrDefault(_ => _.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public void OnNodeDown(string name)
+        {
+            Node node = GetNodeByName(name);
+            if(node != null)
+            {
+                UpdateNodeStatus(node, NodeStatus.Offline);
+                TaskAllocator.StopOngoingTaskOf(node);
+            }
         }
     }
 }

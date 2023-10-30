@@ -1,4 +1,6 @@
 using Worker;
+using Worker.Service;
+using Worker.TaskController;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,7 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<WorkerRegistrar>();
 builder.Services.AddSingleton<WorkerInfo>(provider => provider.GetRequiredService<WorkerRegistrar>().GetWorkerInfo());
+builder.Services.AddHostedService<WorkerHealthReporter>();
 
 var app = builder.Build();
 

@@ -31,7 +31,7 @@ namespace TaskExecutor.Controllers
         [Route("unregister/{name}")]
         public IActionResult UnRegisterNode(string name)
         {
-            NodeManager.UnregisterNode(name);
+            _nodeManager.UnregisterNode(name);
             return Ok();
         }
 
@@ -40,6 +40,14 @@ namespace TaskExecutor.Controllers
         public IActionResult GetAllNodes()
         {
             return Ok(_nodeManager.GetAllNodes());
+        }
+
+        [HttpGet]
+        [Route("shutting-down")]
+        public void ShuttingDownNode(string nodeName)
+        {
+            Console.WriteLine("This method was called!");
+            _nodeManager.OnNodeDown(nodeName);
         }
     }
 }
