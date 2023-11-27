@@ -24,6 +24,9 @@ namespace Worker.TaskController
             return Ok("I'm up!");
         }
 
+
+        // REVIEW:
+        //   I think this implementation of cancelling prior execution will not work as intended. I will let you investigate why.
         [HttpPost]
         [Route("abort")]
         public void AbortTask()
