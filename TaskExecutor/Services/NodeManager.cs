@@ -19,6 +19,8 @@ namespace TaskExecutor.Services
             return Nodes.FirstOrDefault(_ => _.Status == NodeStatus.Available);
         }
 
+        // REVIEW:
+        //   Can you help me understand why these methods are static?
         public static void UpdateNodeStatus(Node nodeToUpdate, NodeStatus status)
         {
             if (nodeToUpdate != null)
