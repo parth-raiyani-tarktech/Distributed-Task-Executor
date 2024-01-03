@@ -2,8 +2,8 @@
 {
     public class TaskAllocation
     {
-        public Task Task { get; set; }
-        public Node Node { get; set; }
+        public Task Task { get; }
+        public Node Node { get; }
 
         public TaskAllocation(Task task, Node node)
         {

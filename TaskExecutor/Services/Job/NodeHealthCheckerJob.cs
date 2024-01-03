@@ -1,36 +1,44 @@
 ﻿using Quartz;
 using TaskExecutor.Models;
+using TaskExecutor.Services.Interface;
 using SystemTask = System.Threading.Tasks.Task;
 
 namespace TaskExecutor.Services.Job
 {
     public class NodeHealthCheckerJob : IJob
     {
+        private readonly INodeManager _nodeManager;
+
+        public NodeHealthCheckerJob(INodeManager nodeManager)
+        {
+            _nodeManager = nodeManager;
+        }
+
         public async SystemTask Execute(IJobExecutionContext context)
         {
             HttpClient client = new HttpClient();
-
             JobDataMap dataMap = context.JobDetail.JobDataMap;
 
-            string? name = dataMap.GetString("name");
-            string? address = dataMap.GetString("address");
+            var nodeName = dataMap.GetString("name");
+            var node = _nodeManager.GetNodeByName(nodeName) ?? throw new Exception("Invalid Scheduled job, no node is present!");
 
             try
             {
-                var response = await client.GetAsync(address + "/api/Task/health-check");
+                var response = await client.GetAsync(node.GetHealthCheckAPI());
                 if (!response.IsSuccessStatusCode)
                 {
-                    NodeManager.UpdateNodeStatusByName(name, NodeStatus.Offline);
-                } else
+                    node.UpdateNodeStatus(NodeStatus.Offline);
+                }
+                else
                 {
-                    NodeManager.UpdateNodeStatusByName(name, NodeStatus.Available);
+                    node.UpdateNodeStatus(NodeStatus.Available);
                 }
 
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Exception occurred! {ex.Message}");
-                NodeManager.UpdateNodeStatusByName(name, NodeStatus.Offline);
+                node.UpdateNodeStatus(NodeStatus.Offline);
             }
         }
     }

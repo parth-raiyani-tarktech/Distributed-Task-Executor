@@ -43,7 +43,6 @@ namespace TaskExecutor.Services.Scheduler
         {
             return JobBuilder.Create<T>()
                 .WithIdentity(node.Id.ToString())
-                .UsingJobData("address", node.Address)
                 .UsingJobData("name", node.Name)
                 .Build();
         }
@@ -51,7 +50,7 @@ namespace TaskExecutor.Services.Scheduler
         public async SystemTask StopAsync(Node node)
         {
             await _scheduler.DeleteJob(new JobKey(node.Id.ToString()));
-            TriggerKey triggerKey = new TriggerKey(node.Id.ToString());
+            var triggerKey = new TriggerKey(node.Id.ToString());
             await _scheduler.UnscheduleJob(triggerKey);
         }
     }

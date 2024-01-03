@@ -1,39 +1,24 @@
-﻿using Quartz.Logging;
-using TaskExecutor.Models;
+﻿using TaskExecutor.Models;
+using TaskExecutor.Repositories.Interface;
+using TaskExecutor.Services.Interface;
 using TaskExecutor.Services.Scheduler;
 
 namespace TaskExecutor.Services
 {
-    public class NodeManager
+    public class NodeManager : INodeManager
     {
-        private static readonly List<Node> Nodes = new List<Node>();
-        private readonly IMyScheduler _scheduler;
+        private readonly INodeRepository _nodeRepository;
+        private readonly IMyScheduler? _scheduler;
 
-        public NodeManager(IServiceProvider serviceProvider)
+        public NodeManager(IServiceProvider serviceProvider, INodeRepository nodeRepository)
         {
             _scheduler = serviceProvider.GetService<IMyScheduler>();
+            _nodeRepository = nodeRepository;
         }
 
-        public static Node? GetFirstAvailableNode()
+        public Node? GetFirstAvailableNode()
         {
-            return Nodes.FirstOrDefault(_ => _.Status == NodeStatus.Available);
-        }
-
-        public static void UpdateNodeStatus(Node nodeToUpdate, NodeStatus status)
-        {
-            if (nodeToUpdate != null)
-            {
-                nodeToUpdate.Status = status;
-                Nodes.First(_ => _.Id.Equals(nodeToUpdate.Id)).Status = status;
-            }
-        }
-
-        public static void UpdateNodeStatusByName(string nodeName, NodeStatus status)
-        {
-            if (nodeName != null)
-            {
-                Nodes.First(_ => _.Name.Equals(nodeName, StringComparison.CurrentCultureIgnoreCase)).Status = status;
-            }
+            return _nodeRepository.GetFirstAvailableNode();
         }
 
         public void RegisterNode(string name, string address)
@@ -48,53 +33,53 @@ namespace TaskExecutor.Services
                 throw new ArgumentException(nameof(address));
             }
 
-            if(Nodes.Find(_ => _.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) != null)
+            if (_nodeRepository.GetNodeByName(name) != null)
             {
                 throw new ArgumentException($"Node with {nameof(name)}: {name} already exist!");
             }
 
-            if (Nodes.Find(_ => _.Address.Equals(address, StringComparison.OrdinalIgnoreCase)) != null)
+            if (_nodeRepository.GetNodeByAddress(address) != null)
             {
                 throw new ArgumentException($"Node with Address {nameof(address)}: {address} already exist!");
             }
 
             Node newNode = new Node(name, address);
-            Nodes.Add(newNode);
+            _nodeRepository.RegisterNode(newNode);
 
-            _scheduler.Start(newNode);
-
-            TaskAllocator.ExecuteTaskAsync();
+            _scheduler?.Start(newNode);
         }
 
-        public void UnregisterNode(string name)
+        public void UnregisterNode(Node nodeToRemove)
         {
-            Node? nodeToRemove = Nodes.FindLast(_ => _.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-
-            if(nodeToRemove != null)
+            if (nodeToRemove != null)
             {
-                _scheduler.StopAsync(nodeToRemove);
-                TaskAllocator.StopOngoingTaskOf(nodeToRemove);
-                Nodes.Remove(nodeToRemove);
+                nodeToRemove.UpdateNodeStatus(NodeStatus.Offline);
+                
+                _scheduler?.StopAsync(nodeToRemove);
+                _nodeRepository.UnregisterNode(nodeToRemove);
             }
         }
 
         public List<Node> GetAllNodes()
         {
-            return Nodes;
+            return _nodeRepository.GetAllNodes();
         }
 
         public Node? GetNodeByName(string name)
         {
-            return Nodes.FirstOrDefault(_ => _.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            return _nodeRepository.GetNodeByName(name);
         }
 
-        public void OnNodeDown(string name)
+        public Node? GetNodeByAddress(string address)
         {
-            Node node = GetNodeByName(name);
-            if(node != null)
+            return _nodeRepository.GetNodeByAddress(address);
+        }
+
+        public void OnNodeDown(Node node)
+        {
+            if (node != null)
             {
-                UpdateNodeStatus(node, NodeStatus.Offline);
-                TaskAllocator.StopOngoingTaskOf(node);
+                node.UpdateNodeStatus(NodeStatus.Offline);
             }
         }
     }

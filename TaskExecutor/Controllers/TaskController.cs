@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Configuration;
 using TaskExecutor.Services;
+using TaskExecutor.Services.Interface;
 using Task = TaskExecutor.Models.Task;
 
 namespace TaskExecutor.Controllers
@@ -8,29 +10,32 @@ namespace TaskExecutor.Controllers
     [ApiController]
     public class TaskController : ControllerBase
     {
-        private readonly TaskAllocator _taskAllocator;
-        public TaskController()
+        private readonly ITaskManager _taskManager;
+        private readonly ITaskOrchestrator _taskOrchestrator;
+        public TaskController(ITaskOrchestrator taskAllocator, ITaskManager taskManager)
         {
-            _taskAllocator = new TaskAllocator();
+            _taskOrchestrator = taskAllocator;
+            _taskManager = taskManager;
         }
 
         [HttpPost]
         public IActionResult CreateTask()
         {
-            Task task = _taskAllocator.CreateTask();
+            var task = _taskManager.CreateTask();
+            _taskOrchestrator.ExecuteTaskAsync();
             return Ok(task);
         }
 
         [HttpGet]
         public IActionResult GetTask(Models.TaskStatus status)
         {
-            return Ok(_taskAllocator.GetTaskByStatus(status));
+            return Ok(_taskManager.GetTasksByStatus(status));
         }
 
         [HttpGet("all-tasks-in-execution-order")]
         public IActionResult GetAllTasksInExecutionOrder()
         {
-            return Ok(_taskAllocator.GetAllTasksInExecutionOrder());
+            return Ok(_taskManager.GetAllTasksInExecutionOrder());
         }
     }
 }

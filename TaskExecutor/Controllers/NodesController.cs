@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TaskExecutor.Models;
-using TaskExecutor.Services;
+using TaskExecutor.Services.Interface;
 
 namespace TaskExecutor.Controllers
 {
@@ -13,10 +8,12 @@ namespace TaskExecutor.Controllers
     [ApiController]
     public class NodesController : ControllerBase
     {
-        private readonly NodeManager _nodeManager;
-        public NodesController(IServiceProvider serviceProvider)
+        private readonly ITaskOrchestrator _taskOrchestrator;
+        private readonly INodeManager _nodeManager;
+        public NodesController(ITaskOrchestrator taskAllocator, INodeManager nodeManager)
         {
-            _nodeManager = new NodeManager(serviceProvider);
+            _taskOrchestrator = taskAllocator;
+            _nodeManager = nodeManager;
         }
 
         [HttpPost]
@@ -24,6 +21,7 @@ namespace TaskExecutor.Controllers
         public IActionResult RegisterNode([FromBody] NodeRegistrationRequest node)
         {
             _nodeManager.RegisterNode(node.Name, node.Address);
+            _taskOrchestrator.ExecuteTaskAsync();
             return Ok();
         }
         
@@ -31,7 +29,12 @@ namespace TaskExecutor.Controllers
         [Route("unregister/{name}")]
         public IActionResult UnRegisterNode(string name)
         {
-            _nodeManager.UnregisterNode(name);
+            var node = _nodeManager?.GetNodeByName(name);
+
+            _taskOrchestrator.StopOngoingTaskOf(node);
+
+            _nodeManager?.UnregisterNode(node);
+            _taskOrchestrator.ExecuteTaskAsync();
             return Ok();
         }
 
@@ -46,8 +49,13 @@ namespace TaskExecutor.Controllers
         [Route("shutting-down")]
         public void ShuttingDownNode(string nodeName)
         {
-            Console.WriteLine("This method was called!");
-            _nodeManager.OnNodeDown(nodeName);
+            Console.WriteLine($"{nodeName} is shutting down!");
+
+            var node = _nodeManager?.GetNodeByName(nodeName);
+            _nodeManager?.OnNodeDown(node);
+
+            _taskOrchestrator.StopOngoingTaskOf(node);
+            _taskOrchestrator.ExecuteTaskAsync();
         }
     }
 }

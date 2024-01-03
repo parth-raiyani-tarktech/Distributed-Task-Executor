@@ -2,24 +2,54 @@
 {
     public class Node
     {
-        public Guid Id { get; set; }
-        public string Name { get; set; }
-        public string Address { get; set; }
-        public string ExecuteTaskUrl { get; set; }
-        public string AbortTaskUrl { get; set; }
-        public NodeStatus Status { get; set; }
+        public Guid Id { get; }
+        public string Name { get; }
+        public string Address { get; } 
 
-        public List<TaskAllocation> TaskAllocation { get; set; }
+        public NodeStatus Status { get; set; }
 
         public Node(string name, string address)
         {
             Id = Guid.NewGuid();
             Name = name;
             Address = address;
-            ExecuteTaskUrl = address + "/api/Task/execute";
-            AbortTaskUrl = address + "/api/Task/abort";
             Status = NodeStatus.Available;
-            TaskAllocation = new List<TaskAllocation>();
+        }
+
+        public string GetExecuteTaskUrl()
+        {
+            return Address + "/api/Task/execute";
+        }
+
+        public string GetAbortTaskUrl()
+        {
+            return Address + "/api/Task/abort";
+        }
+
+        public string GetHealthCheckAPI()
+        {
+            return Address + "/api/Task/health-check";
+        }
+
+        public void UpdateNodeStatus(NodeStatus newStatus)
+        {
+            Status = newStatus;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Id, Name, Address, Status);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (!(obj is Node otherNode))
+                return false;
+
+            return Id == otherNode.Id 
+                && Name == otherNode.Name 
+                && Address == otherNode.Address 
+                && Status == otherNode.Status;
         }
     }
 }

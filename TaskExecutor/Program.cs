@@ -1,4 +1,8 @@
 using Quartz.Spi;
+using TaskExecutor.Repositories;
+using TaskExecutor.Repositories.Interface;
+using TaskExecutor.Services;
+using TaskExecutor.Services.Interface;
 using TaskExecutor.Services.Job;
 using TaskExecutor.Services.Scheduler;
 
@@ -15,6 +19,13 @@ builder.Services.AddTransient<NodeHealthCheckerJob>();
 
 builder.Services.AddSingleton<IJobFactory, MyJobFactory>();
 builder.Services.AddSingleton<IMyScheduler, MyScheduler>();
+
+builder.Services.AddSingleton<INodeManager, NodeManager>();
+builder.Services.AddSingleton<ITaskManager, TaskManager>();
+builder.Services.AddSingleton<ITaskOrchestrator, TaskOrchestrator>();
+
+builder.Services.AddSingleton<INodeRepository, NodeRepository>();
+builder.Services.AddSingleton<ITaskRepository, TaskRepository>();
 
 var app = builder.Build();
 
